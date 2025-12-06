@@ -688,7 +688,8 @@ class Program
 
             // Search for image file matching the game name
             var searchPatterns = supportedFormats.SelectMany(f => new[] 
-                { 
+                {
+                    $"CD{f}",
                     $"{gameName}{f}",
                     $"{gameName} (Disc 1){f}",
                     $"{gameName} (Disc 2){f}",
