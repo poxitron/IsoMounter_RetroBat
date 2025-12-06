@@ -1,4 +1,6 @@
-IsoMounter – Auto mount old CD-ROM game images in RetroBat
+A fork of IsoMounter plugin made by Aynshe.
+
+WinCDEmu does not support Audio CDs, so I replaced it with ImDrive (a free and lightweight virtual drive).
 
 
 # 💿 IsoMounter for RetroBat
