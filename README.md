@@ -46,12 +46,12 @@ You can download it here:
 🗂️ Supported formats
 Supports various disk image formats.
 
-If WinCDEmu is installed, it will be used to mount all image formats, including .iso, .cue/.bin, and others.
+If ImgDrive is installed, it will be used to mount all image formats, including .iso, .cue/.bin, and others.
 (If you rename a .cue and .bin to match your game, be sure to update the content inside the .cue accordingly.)
 
 Otherwise, only .iso files will be mounted using Windows' native system.
 
-✅ WinCDEmu is recommended:
+✅ ImgDrive is recommended:
 It is generally faster, and CD mounting errors should occur less frequently in games.
 
-🔗 https://wincdemu.sysprogs.org/
+🔗 https://www.yubsoft.com/imgdrive/

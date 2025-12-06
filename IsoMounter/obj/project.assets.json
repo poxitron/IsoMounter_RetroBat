@@ -1879,30 +1879,25 @@
   },
   "projectFileDependencyGroups": {
     "net9.0": [
-      "DiscUtils.Core >= 0.15.1",
+      "DiscUtils.Core >= 0.16.4",
       "DiscUtils.Iso9660 >= 0.16.4",
       "System.Management.Automation >= 7.0.0"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Wiin11\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\poxitron\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "F:\\.Gemini\\IsoMount\\IsoMounter\\IsoMounter.csproj",
+      "projectUniqueName": "C:\\Users\\poxitron\\Google Drive\\GitHub\\IsoMounter_RetroBat\\IsoMounter\\IsoMounter.csproj",
       "projectName": "IsoMounter",
-      "projectPath": "F:\\.Gemini\\IsoMount\\IsoMounter\\IsoMounter.csproj",
-      "packagesPath": "C:\\Users\\Wiin11\\.nuget\\packages\\",
-      "outputPath": "F:\\.Gemini\\IsoMount\\IsoMounter\\obj\\",
+      "projectPath": "C:\\Users\\poxitron\\Google Drive\\GitHub\\IsoMounter_RetroBat\\IsoMounter\\IsoMounter.csproj",
+      "packagesPath": "C:\\Users\\poxitron\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\poxitron\\Google Drive\\GitHub\\IsoMounter_RetroBat\\IsoMounter\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\Wiin11\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Users\\poxitron\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -1928,7 +1923,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.300"
+      "SdkAnalysisLevel": "10.0.100"
     },
     "frameworks": {
       "net9.0": {
@@ -1936,7 +1931,7 @@
         "dependencies": {
           "DiscUtils.Core": {
             "target": "Package",
-            "version": "[0.15.1, )"
+            "version": "[0.16.4, )"
           },
           "DiscUtils.Iso9660": {
             "target": "Package",
@@ -1963,20 +1958,8 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "IsoMounter dépend de DiscUtils.Core (>= 0.15.1) mais DiscUtils.Core 0.15.1 est introuvable. DiscUtils.Core 0.16.4 a été résolu à la place.",
-      "libraryId": "DiscUtils.Core",
-      "targetGraphs": [
-        "net9.0"
-      ]
-    }
-  ]
+  }
 }
