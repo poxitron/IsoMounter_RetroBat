@@ -96,9 +96,9 @@ class Program
             return 1;
         }
 
-        LogMessage($"Starting to unmount image: {mountedImage}");
-        Console.WriteLine($"Unmounting image: {mountedImage}");
-        
+        LogMessage($"Unmounting image: {mountedImage}");
+         //Console.WriteLine($"Unmounting image: {mountedImage}");
+
         try
         {
             // Check if ImgDrive is available
@@ -108,7 +108,7 @@ class Program
             if (hasImgDrive)
             {
                 // Use ImgDrive for all types of images
-                LogMessage("Using ImgDrive for unmounting");
+                //LogMessage("Using ImgDrive for unmounting");
                 success = UnmountWithImgDrive(mountedImage);
             }
 
@@ -536,11 +536,11 @@ class Program
 
             if (!canUseImgDrive)
             {
-                LogMessage("ImgDrive is not installed. Only the ISO format is supported.", true);
+                LogMessage("ImgDrive is not installed.", true);
             }
             else
             {
-                LogMessage("ImgDrive is installed. All image formats are supported.");
+                LogMessage("ImgDrive is installed.");
             }
 
             // Search for image file matching the game name
