@@ -12,7 +12,7 @@ class Program
     // ImgDrive installation path
     private static string _ImgDrivePath = null;
     private static readonly string[] _supportedImageFormats = { ".iso", ".bin", ".cue", ".img", ".mdf", ".nrg", ".cdi", ".dmg" };
-    private static readonly string[] _ImgDriveExecutables = { "imgdrive.exe" };
+    private static readonly string _ImgDriveExecutables = "imgdrive.exe";
 
     // File to store the mounted image path
     private static readonly string MountInfoFile = Path.Combine(Path.GetTempPath(), "IsoMounter.mount");
@@ -315,15 +315,12 @@ class Program
                         string installPath = key.GetValue("InstallLocation") as string;
                         if (!string.IsNullOrEmpty(installPath))
                         {
-                            foreach (var exe in _ImgDriveExecutables)
+                            string fullPath = Path.Combine(installPath, _ImgDriveExecutables);
+                            if (File.Exists(fullPath))
                             {
-                                string fullPath = Path.Combine(installPath, exe);
-                                if (File.Exists(fullPath))
-                                {
-                                    _ImgDrivePath = fullPath;
-                                    LogMessage($"ImgDrive found: {_ImgDrivePath}");
-                                    return true;
-                                }
+                                _ImgDrivePath = fullPath;
+                                LogMessage($"ImgDrive found: {_ImgDrivePath}");
+                                return true;
                             }
                         }
                     }
@@ -343,15 +340,12 @@ class Program
             {
                 if (Directory.Exists(path))
                 {
-                    foreach (var exe in _ImgDriveExecutables)
+                    string fullPath = Path.Combine(path, _ImgDriveExecutables);
+                    if (File.Exists(fullPath))
                     {
-                        string fullPath = Path.Combine(path, exe);
-                        if (File.Exists(fullPath))
-                        {
-                            _ImgDrivePath = fullPath;
-                            LogMessage($"ImgDrive found in Program Files: {_ImgDrivePath}");
-                            return true;
-                        }
+                        _ImgDrivePath = fullPath;
+                        LogMessage($"ImgDrive found in Program Files: {_ImgDrivePath}");
+                        return true;
                     }
                 }
             }
@@ -362,15 +356,12 @@ class Program
             {
                 if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
                 {
-                    foreach (var exe in _ImgDriveExecutables)
+                    string fullPath = Path.Combine(path, _ImgDriveExecutables);
+                    if (File.Exists(fullPath))
                     {
-                        string fullPath = Path.Combine(path, exe);
-                        if (File.Exists(fullPath))
-                        {
-                            _ImgDrivePath = fullPath;
-                            LogMessage($"ImgDrive found in the PATH: {_ImgDrivePath}");
-                            return true;
-                        }
+                        _ImgDrivePath = fullPath;
+                        LogMessage($"ImgDrive found in the PATH: {_ImgDrivePath}");
+                        return true;
                     }
                 }
             }
