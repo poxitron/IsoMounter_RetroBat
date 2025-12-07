@@ -10,7 +10,7 @@ using Microsoft.Win32;
 class Program
 {
     // ImgDrive installation path
-    private static string _ImgDrivePath = null;
+    private static string _ImgDrivePath = string.Empty;
     private static readonly string[] _supportedImageFormats = { ".iso", ".bin", ".cue", ".img", ".mdf", ".nrg", ".cdi", ".dmg" };
     private static readonly string _ImgDriveExecutables = "imgdrive.exe";
 
@@ -54,7 +54,7 @@ class Program
                 return path;
             }
         }
-        return null;
+        return string.Empty;
     }
 
     // Removes the mount information file
@@ -97,29 +97,28 @@ class Program
         }
 
         LogMessage($"Unmounting image: {mountedImage}");
-         //Console.WriteLine($"Unmounting image: {mountedImage}");
+        //Console.WriteLine($"Unmounting image: {mountedImage}");
 
         try
         {
-            // Check if ImgDrive is available
+            // Check if ImgDrive is installed
             bool hasImgDrive = IsImgDriveInstalled();
             bool success = false;
             
             if (hasImgDrive)
             {
-                // Use ImgDrive for all types of images
-                //LogMessage("Using ImgDrive for unmounting");
+                // Unmount the image file
                 success = UnmountWithImgDrive(mountedImage);
             }
 
             if (success)
             {
                 ClearMountedImage();
-                LogMessage("Unmount successful");
+                LogMessage("Image unmounted successfully");
                 return 0;
             }
             
-            LogMessage("Failed to unmount with all methods", true);
+            LogMessage("Failed to unmount the image file", true);
             return 1;
         }
         catch (Exception ex)
@@ -145,7 +144,7 @@ class Program
             
             if (!File.Exists(ImgDrivePath))
             {
-                LogMessage("No ImgDrive executable found for unount the file.", true);
+                LogMessage("No ImgDrive executable found to unmount the image file", true);
                 return false;
             }
 
@@ -172,14 +171,14 @@ class Program
                 process.OutputDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)) {
                         outputBuilder.AppendLine(e.Data);
-                        LogMessage($"Sortie: {e.Data}");
+                        LogMessage($"Output: {e.Data}");
                     }
                 };
                 
                 process.ErrorDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)) {
                         errorBuilder.AppendLine(e.Data);
-                        LogMessage($"Erreur: {e.Data}", true);
+                        LogMessage($"Error: {e.Data}", true);
                     }
                 };
 
@@ -193,9 +192,9 @@ class Program
                 
                 if (!success || process.ExitCode != 0)
                 {
-                    LogMessage($"Error unmounting the file. Exit code: {process.ExitCode}", true);
-                    if (!string.IsNullOrEmpty(output)) LogMessage($"Sortie complète: {output}", true);
-                    if (!string.IsNullOrEmpty(error)) LogMessage($"Erreur complète: {error}", true);
+                    LogMessage($"Error unmounting the image file. Exit code: {process.ExitCode}", true);
+                    if (!string.IsNullOrEmpty(output)) LogMessage($"Output data: {output}", true);
+                    if (!string.IsNullOrEmpty(error)) LogMessage($"Error data: {error}", true);
                     return false;
                 }
                 
@@ -421,7 +420,7 @@ class Program
     static int Main(string[] args)
     {
         InitializeLog();
-        
+
         // Arguments validation
         if (args.Length == 0)
         {
@@ -608,32 +607,32 @@ class Program
 
                 if (mountSuccess)
                 {
-                        // Save the mounted image path.
-                        try
-                        {
-                            SaveMountedImage(imagePath);
-                            LogMessage("Mount information saved");
-                        }
-                        catch (Exception ex)
-                        {
-                            string errorMsg = $"Error saving mount state: {ex.Message}";
-                            LogMessage(errorMsg, true);
-                            Console.WriteLine(errorMsg);
-                        }
-                        
-                        // In non-interactive mode (default), exit immediately.
-                        LogMessage("Non-interactive mode, exiting immediately");
-                        
-                        // Interactive mode only if explicitly requested.
-                        if (interactive && Environment.UserInteractive)
-                        {
-                            LogMessage("Interactive mode detected, waiting for key press...");
-                            Console.WriteLine("Press any key to unmount and exit...");
-                            Console.ReadKey();
-                            return UnmountImage();
-                        }
-                        
-                        return 0; // Success
+                    // Save the mounted image path.
+                    try
+                    {
+                        SaveMountedImage(imagePath);
+                        LogMessage("Mount information saved");
+                    }
+                    catch (Exception ex)
+                    {
+                        string errorMsg = $"Error saving mount state: {ex.Message}";
+                        LogMessage(errorMsg, true);
+                        Console.WriteLine(errorMsg);
+                    }
+                    
+                    // In non-interactive mode (default), exit immediately.
+                    LogMessage("Non-interactive mode, exiting immediately");
+                    
+                    // Interactive mode only if explicitly requested.
+                    if (interactive && Environment.UserInteractive)
+                    {
+                        LogMessage("Interactive mode detected, waiting for key press...");
+                        Console.WriteLine("Press any key to unmount and exit...");
+                        Console.ReadKey();
+                        return UnmountImage();
+                    }
+                    
+                    return 0; // Success
                 }
                     else
                     {
@@ -642,23 +641,23 @@ class Program
                         Console.WriteLine(errorMsg);
                         return 1;
                     }
-                }
-                catch (Exception ex)
-                {
-                    string errorMsg = $"Error mounting image: {ex.Message}";
-                    LogMessage(errorMsg, true);
-                    Console.WriteLine(errorMsg);
-                    return 1;
-                }
             }
             catch (Exception ex)
             {
-                string errorMsg = $"Unexpected error: {ex.Message}";
+                string errorMsg = $"Error mounting image: {ex.Message}";
                 LogMessage(errorMsg, true);
                 Console.WriteLine(errorMsg);
                 return 1;
             }
+        }
+        catch (Exception ex)
+        {
+            string errorMsg = $"Unexpected error: {ex.Message}";
+            LogMessage(errorMsg, true);
+            Console.WriteLine(errorMsg);
+            return 1;
+        }
             
-            return 0; // End of program
+            //return 0; // End of program
     }
 }
