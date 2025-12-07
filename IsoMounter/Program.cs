@@ -111,24 +111,6 @@ class Program
                 LogMessage("Using ImgDrive for unmounting");
                 success = UnmountWithImgDrive(mountedImage);
             }
-            else
-            {
-                // Check if it's an ISO for native Windows unmounting
-                string extension = Path.GetExtension(mountedImage)?.ToLowerInvariant();
-                bool isIso = extension == ".iso";
-                
-                if (isIso)
-                {
-                    // Use native Windows unmounting only for ISOs
-                    LogMessage("Using native Windows unmount for ISO");
-                    success = UnmountWithWindowsNative(mountedImage);
-                }
-                else
-                {
-                    LogMessage("No unmount method available for this image format", true);
-                    return 1;
-                }
-            }
 
             if (success)
             {
@@ -144,44 +126,6 @@ class Program
         {
             LogMessage($"Error while unmounting: {ex.Message}", true);
             return 1;
-        }
-    }
-
-    // Unmounts an image using the native Windows method (for ISOs)
-    private static bool UnmountWithWindowsNative(string imagePath)
-    {
-        try
-        {
-            LogMessage("Trying native Windows unmount...");
-            
-            string psCommand = $"Dismount-DiskImage -ImagePath '{imagePath.Replace("'", "''")}'";
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{psCommand}\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using (var process = new Process { StartInfo = startInfo })
-            {
-                process.Start();
-                string output = process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd();
-                process.WaitForExit(5000);
-
-                if (!string.IsNullOrEmpty(output)) LogMessage($"Sortie native: {output}");
-                if (!string.IsNullOrEmpty(error)) LogMessage($"Erreur native: {error}", true);
-
-                return process.ExitCode == 0;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Error during native unmount: {ex.Message}", true);
-            return false;
         }
     }
 
@@ -458,84 +402,6 @@ class Program
         }
     }
 
-    // Mount an ISO image using PowerShell
-    private static bool MountIso(string isoPath)
-    {
-        try
-        {
-            // Check if file exists
-            if (!File.Exists(isoPath))
-            {
-                LogMessage($"ISO file does not exist: {isoPath}", true);
-                return false;
-            }
-
-            // Check if image is already mounted
-            if (IsImageMounted(isoPath))
-            {
-                LogMessage("Image is already mounted");
-                return true;
-            }
-
-            // Prepare PowerShell command
-            string psCommand = $"$null = Mount-DiskImage -ImagePath '{isoPath.Replace("'", "''")}' -PassThru -ErrorAction Stop";
-            
-            LogMessage($"Starting mount process...");
-            
-            var stopwatch = Stopwatch.StartNew();
-            
-            using (var process = new Process())
-            {
-                process.StartInfo = new ProcessStartInfo
-                {
-                    FileName = "powershell.exe",
-                    Arguments = $"-ExecutionPolicy Bypass -NoProfile -NonInteractive -Command \"& {{ {psCommand} }}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                process.Start();
-                
-                // Wait a bit to allow mounting to start
-                if (!process.WaitForExit(5000)) // 5 seconds maximum
-                {
-                    LogMessage("Mounting is taking longer than expected");
-                }
-                
-                process.WaitForExit();
-                stopwatch.Stop();
-                
-                LogMessage($"Mounting time: {stopwatch.ElapsedMilliseconds}ms");
-
-                if (process.ExitCode != 0)
-                {
-                    LogMessage($"Mounting failed with exit code: {process.ExitCode}", true);
-                    return false;
-                }
-
-                // Verify the mount was successful
-                int retries = 10; // Number of verification attempts
-                while (retries-- > 0)
-                {
-                    if (IsImageMounted(isoPath))
-                    {
-                        LogMessage("Image mounted successfully");
-                        return true;
-                    }
-                    Thread.Sleep(100); // Wait 100ms between checks
-                }
-
-                LogMessage("Mounting seems successful but not yet visible", true);
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Error mounting ISO: {ex.Message}", true);
-            return false;
-        }
-    }
-
     // Initializes the logging system
     private static void InitializeLog()
     {
@@ -738,19 +604,6 @@ class Program
                     
                     LogMessage($"Attempting to mount with ImgDrive: {imagePath}");
                     mountSuccess = MountWithImgDrive(imagePath);
-                }
-                // Alternatively, use native Windows mounting only for ISOs.
-                else if (extension == ".iso")
-                {
-                    LogMessage($"Attempting native Windows mounting: {imagePath}");
-                    mountSuccess = MountIso(imagePath);
-                }
-                else
-                {
-                    string errorMsg = "Image format not supported without ImgDrive.";
-                    LogMessage(errorMsg, true);
-                    Console.WriteLine(errorMsg);
-                    return 1;
                 }
 
                 if (mountSuccess)
