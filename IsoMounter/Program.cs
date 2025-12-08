@@ -19,7 +19,7 @@ class Program
     // Log file path
     private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "IsoMounter.log");
 
-    // Constants for mounting disk images
+    // Constants for mounting disc images
     private const int DDD_RAW_TARGET_PATH = 0x1;
     private const int DDD_REMOVE_DEFINITION = 0x2;
     private const int DONT_RESOLVE_DLL_REFERENCES = 0x00000001;
@@ -519,7 +519,7 @@ class Program
                 {
                     LogMessage("Creating ISO folder as it doesn't exist");
                     Directory.CreateDirectory(isoFolder);
-                    string message = $"The folder {isoFolder} has been created. Please place your disk images there.";
+                    string message = $"The folder {isoFolder} has been created. Please place your disc images there.";
                     LogMessage(message);
                     Console.WriteLine(message);
                     return 1;
