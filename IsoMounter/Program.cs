@@ -470,7 +470,7 @@ class Program
             // Extract game name from full path
 
             // Extract game name (last path segment without extension)
-            string gameName = Path.GetFileNameWithoutExtension(romPath);
+            string gameName = Path.GetFileName(romPath);
             LogMessage($"Extracted filename: {gameName}");
 
             // If path contains 'roms' (case insensitive), take the following segment
