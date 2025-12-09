@@ -469,7 +469,7 @@ class Program
             // Extract game name from full path
 
             // Extract game name (last path segment without extension)
-            string gameName = Path.GetFileName(romPath);
+            string gameName = Path.GetFileNameWithoutExtension(romPath);
             LogMessage($"Extracted filename: {gameName}");
 
             // If path contains 'roms' (case insensitive), take the following segment
@@ -505,7 +505,6 @@ class Program
             }
 
             LogMessage($"Searching image for game: {gameName}");
-            Console.WriteLine($"Searching image for game: {gameName}");
 
             // Folder containing the ISO images (same folder as the executable)
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
@@ -581,13 +580,11 @@ class Program
             {
                 string errorMsg = $"No image found for game: {gameName}";
                 LogMessage(errorMsg, true);
-                Console.WriteLine(errorMsg);
                 return 1;
             }
 
             string imagePath = matchingFiles[0];
             LogMessage($"Image found: {imagePath}");
-            Console.WriteLine($"Image found: {imagePath}");
 
             // Try to mount the image
             try
