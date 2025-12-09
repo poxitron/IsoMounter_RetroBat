@@ -509,6 +509,8 @@ class Program
             // Folder containing the ISO images (same folder as the executable)
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
             string isoFolder = Path.Combine(appPath, "iso");
+            string romDirectory = Path.GetDirectoryName(romPath) + "\\" + Path.GetFileNameWithoutExtension(romPath);
+            LogMessage($"Rom directory: {romDirectory}");
             LogMessage($"Images folder: {isoFolder}");
 
             // Create directory if it doesn't exist
@@ -573,7 +575,7 @@ class Program
             }
 
             string[] matchingFiles = searchPatterns
-                .SelectMany(pattern => Directory.GetFiles(isoFolder, pattern, SearchOption.TopDirectoryOnly))
+                .SelectMany(pattern => Directory.GetFiles(romDirectory, pattern, SearchOption.TopDirectoryOnly))
                 .ToArray();
 
             if (matchingFiles.Length == 0)
