@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Threading;
 using System.Management;
 using Microsoft.Win32;
+using System.Diagnostics.Eventing.Reader;
 
 class Program
 {
@@ -72,7 +73,7 @@ class Program
         try
         {
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-            string logMessage = $"[{timestamp}] {(isError ? "ERROR" : "INFO")} - {message}";
+            string logMessage = $"[{timestamp}] {(isError ? "ERROR" : "INFO ")} - {message}";
 
             // Write to console
             Console.WriteLine(logMessage);
@@ -509,9 +510,9 @@ class Program
             // Folder containing the ISO images (same folder as the executable)
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
             string isoFolder = Path.Combine(appPath, "iso");
-            string romDirectory = Path.GetDirectoryName(romPath) + "\\" + Path.GetFileNameWithoutExtension(romPath);
-            LogMessage($"Rom directory: {romDirectory}");
-            LogMessage($"Images folder: {isoFolder}");
+            string romFolder = Path.GetDirectoryName(romPath) + "\\" + Path.GetFileNameWithoutExtension(romPath);
+            //LogMessage($"Rom directory: {romDirectory}");
+            //LogMessage($"Images folder: {isoFolder}");
 
             // Create directory if it doesn't exist
             if (!Directory.Exists(isoFolder))
@@ -574,18 +575,32 @@ class Program
                     .Select(p => p.Replace(".cue", ".bin")));
             }
 
-            string[] matchingFiles = searchPatterns
-                .SelectMany(pattern => Directory.GetFiles(romDirectory, pattern, SearchOption.TopDirectoryOnly))
+            string[] matchingFiles1 = searchPatterns
+                .SelectMany(pattern => Directory.GetFiles(isoFolder, pattern, SearchOption.TopDirectoryOnly))
                 .ToArray();
 
-            if (matchingFiles.Length == 0)
+            string[] matchingFiles2 = searchPatterns
+                .SelectMany(pattern => Directory.GetFiles(romFolder, pattern, SearchOption.TopDirectoryOnly))
+                .ToArray();
+
+            string imagePath = string.Empty;
+
+            if (matchingFiles1.Length > 0)
             {
-                string errorMsg = $"No image found for game: {gameName}";
-                LogMessage(errorMsg, true);
+                LogMessage("Image found in \\iso folder", false);
+                imagePath = matchingFiles1[0];
+            }
+            else if (matchingFiles2.Length > 0)
+            {
+                LogMessage("Image found in game folder", false);
+                imagePath = matchingFiles2[0];
+            }
+            else
+            {
+                LogMessage("Image not found", true);
                 return 1;
             }
 
-            string imagePath = matchingFiles[0];
             LogMessage($"Image found: {imagePath}");
 
             // Try to mount the image
