@@ -1,7 +1,7 @@
 {
   "version": 3,
   "targets": {
-    "net9.0": {
+    "net9.0-windows7.0": {
       "DiscUtils.Core/0.16.4": {
         "type": "package",
         "dependencies": {
@@ -1878,7 +1878,7 @@
     }
   },
   "projectFileDependencyGroups": {
-    "net9.0": [
+    "net9.0-windows7.0": [
       "DiscUtils.Core >= 0.16.4",
       "DiscUtils.Iso9660 >= 0.16.4",
       "System.Management.Automation >= 7.0.0"
@@ -1901,15 +1901,15 @@
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
-        "net9.0"
+        "net9.0-windows"
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net9.0": {
-          "targetAlias": "net9.0",
+        "net9.0-windows7.0": {
+          "targetAlias": "net9.0-windows",
           "projectReferences": {}
         }
       },
@@ -1926,8 +1926,8 @@
       "SdkAnalysisLevel": "10.0.100"
     },
     "frameworks": {
-      "net9.0": {
-        "targetAlias": "net9.0",
+      "net9.0-windows7.0": {
+        "targetAlias": "net9.0-windows",
         "dependencies": {
           "DiscUtils.Core": {
             "target": "Package",

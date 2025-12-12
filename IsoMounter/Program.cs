@@ -152,7 +152,7 @@ class Program
                 return false;
             }
 
-            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath);
+            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath) ?? string.Empty;
             string ImgDrivePath = Path.Combine(ImgDriveDir, "imgdrive.exe");
 
             if (!File.Exists(ImgDrivePath))
@@ -272,7 +272,7 @@ class Program
                 {
                     if (key != null)
                     {
-                        string installPath = key.GetValue("InstallLocation") as string;
+                        string installPath = key.GetValue("InstallLocation") as string ?? string.Empty;
                         if (!string.IsNullOrEmpty(installPath))
                         {
                             string fullPath = Path.Combine(installPath, _ImgDriveExecutables);
@@ -340,7 +340,7 @@ class Program
     {
         try
         {
-            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath);
+            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath) ?? string.Empty;
 
             // Check if imgdrive.exe exists
             string ImgDriveExePath = Path.Combine(ImgDriveDir, "imgdrive.exe");
