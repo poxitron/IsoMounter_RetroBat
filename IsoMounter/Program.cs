@@ -6,20 +6,21 @@ using System.Globalization;
 using System.Threading;
 using System.Management;
 using Microsoft.Win32;
+using System.Diagnostics.Eventing.Reader;
 
 class Program
 {
     // ImgDrive installation path
-    private static string _ImgDrivePath = null;
+    private static string _ImgDrivePath = string.Empty;
     private static readonly string[] _supportedImageFormats = { ".iso", ".bin", ".cue", ".img", ".mdf", ".nrg", ".cdi", ".dmg" };
-    private static readonly string[] _ImgDriveExecutables = { "imgdrive.exe" };
+    private static readonly string _ImgDriveExecutables = "imgdrive.exe";
 
     // File to store the mounted image path
     private static readonly string MountInfoFile = Path.Combine(Path.GetTempPath(), "IsoMounter.mount");
     // Log file path
     private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "IsoMounter.log");
 
-    // Constants for mounting disk images
+    // Constants for mounting disc images
     private const int DDD_RAW_TARGET_PATH = 0x1;
     private const int DDD_REMOVE_DEFINITION = 0x2;
     private const int DONT_RESOLVE_DLL_REFERENCES = 0x00000001;
@@ -28,22 +29,22 @@ class Program
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DefineDosDevice(int dwFlags, string lpDeviceName, string lpTargetPath);
-    
+
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     private static extern int GetDriveType(string lpRootPathName);
-    
+
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern bool GetVolumeNameForVolumeMountPoint(string lpszVolumeMountPoint, 
-                                                             [Out] StringBuilder lpszVolumeName, 
+    private static extern bool GetVolumeNameForVolumeMountPoint(string lpszVolumeMountPoint,
+                                                             [Out] StringBuilder lpszVolumeName,
                                                              uint cchBufferLength);
 
-     // Saves the mounted image path to a temporary file
+    // Saves the mounted image path to a temporary file
     private static void SaveMountedImage(string imagePath)
     {
         File.WriteAllText(MountInfoFile, imagePath, Encoding.UTF8);
     }
 
-      // Gets the path of the currently mounted image
+    // Gets the path of the currently mounted image
     private static string GetMountedImagePath()
     {
         if (File.Exists(MountInfoFile))
@@ -54,7 +55,7 @@ class Program
                 return path;
             }
         }
-        return null;
+        return string.Empty;
     }
 
     // Removes the mount information file
@@ -66,122 +67,77 @@ class Program
         }
     }
 
-    // Logs a message to both file and console
-    private static void LogMessage(string message, bool isError = false)
+    // Logs a message to console, file or both
+    private static void LogMessage(string message, bool isError = false, string output = "")
     {
         try
         {
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-            string logMessage = $"[{timestamp}] {(isError ? "ERROR" : "INFO")} - {message}";
-            
-            // Write to console
-            Console.WriteLine(logMessage);
-            
-            // Write to log file
-            File.AppendAllText(LogFilePath, logMessage + Environment.NewLine, Encoding.UTF8);
+            string logMessage = $"[{timestamp}] {(isError ? "ERROR" : "INFO ")} - {message}";
+            if (output == "console")
+            {
+                Console.WriteLine(logMessage);
+            }
+            else if (output == "file")
+            {
+                File.AppendAllText(LogFilePath, logMessage + Environment.NewLine, Encoding.UTF8);
+            }
+            else if (output == "both")
+            {
+                Console.WriteLine(logMessage);
+                File.AppendAllText(LogFilePath, logMessage + Environment.NewLine, Encoding.UTF8);
+            }
+            else
+            {
+                Console.WriteLine(logMessage);
+                File.AppendAllText(LogFilePath, logMessage + Environment.NewLine, Encoding.UTF8);
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error writing to the log file: {ex.Message}");
         }
     }
-    
+
     // Unmounts the previously mounted image
     private static int UnmountImage()
     {
         string mountedImage = GetMountedImagePath();
         if (mountedImage == null)
         {
-            LogMessage("No mounted image found");
+            LogMessage("No mounted image found", false, "both");
             return 1;
         }
 
-        LogMessage($"Starting to unmount image: {mountedImage}");
-        Console.WriteLine($"Unmounting image: {mountedImage}");
-        
+        LogMessage($"Unmounting image: {mountedImage}", false, "both");
+        //Console.WriteLine($"Unmounting image: {mountedImage}");
+
         try
         {
-            // Check if ImgDrive is available
+            // Check if ImgDrive is installed
             bool hasImgDrive = IsImgDriveInstalled();
             bool success = false;
-            
+
             if (hasImgDrive)
             {
-                // Use ImgDrive for all types of images
-                LogMessage("Using ImgDrive for unmounting");
+                // Unmount the image file
                 success = UnmountWithImgDrive(mountedImage);
-            }
-            else
-            {
-                // Check if it's an ISO for native Windows unmounting
-                string extension = Path.GetExtension(mountedImage)?.ToLowerInvariant();
-                bool isIso = extension == ".iso";
-                
-                if (isIso)
-                {
-                    // Use native Windows unmounting only for ISOs
-                    LogMessage("Using native Windows unmount for ISO");
-                    success = UnmountWithWindowsNative(mountedImage);
-                }
-                else
-                {
-                    LogMessage("No unmount method available for this image format", true);
-                    return 1;
-                }
             }
 
             if (success)
             {
                 ClearMountedImage();
-                LogMessage("Unmount successful");
+                LogMessage("Image unmounted successfully", false, "both");
                 return 0;
             }
-            
-            LogMessage("Failed to unmount with all methods", true);
+
+            LogMessage("Failed to unmount the image file", true, "both");
             return 1;
         }
         catch (Exception ex)
         {
-            LogMessage($"Error while unmounting: {ex.Message}", true);
+            LogMessage($"Error while unmounting: {ex.Message}", true, "both");
             return 1;
-        }
-    }
-
-    // Unmounts an image using the native Windows method (for ISOs)
-    private static bool UnmountWithWindowsNative(string imagePath)
-    {
-        try
-        {
-            LogMessage("Trying native Windows unmount...");
-            
-            string psCommand = $"Dismount-DiskImage -ImagePath '{imagePath.Replace("'", "''")}'";
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{psCommand}\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using (var process = new Process { StartInfo = startInfo })
-            {
-                process.Start();
-                string output = process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd();
-                process.WaitForExit(5000);
-
-                if (!string.IsNullOrEmpty(output)) LogMessage($"Sortie native: {output}");
-                if (!string.IsNullOrEmpty(error)) LogMessage($"Erreur native: {error}", true);
-
-                return process.ExitCode == 0;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Error during native unmount: {ex.Message}", true);
-            return false;
         }
     }
 
@@ -192,23 +148,23 @@ class Program
         {
             if (string.IsNullOrEmpty(_ImgDrivePath))
             {
-                LogMessage("ImgDrive is not installed");
+                LogMessage("ImgDrive is not installed", true, "both");
                 return false;
             }
 
-            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath);
+            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath) ?? string.Empty;
             string ImgDrivePath = Path.Combine(ImgDriveDir, "imgdrive.exe");
-            
+
             if (!File.Exists(ImgDrivePath))
             {
-                LogMessage("No ImgDrive executable found for unount the file.", true);
+                LogMessage("No ImgDrive executable found to unmount the image file", true, "both");
                 return false;
             }
 
             // Use the exact syntax that works on the command line.
             string arguments = $"-u \"{imagePath}\"";
-            LogMessage($"Command execution: {Path.GetFileName(ImgDrivePath)} {arguments}");
-            
+            LogMessage($"Command execution: {Path.GetFileName(ImgDrivePath)} {arguments}", false, "both");
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = ImgDrivePath,
@@ -224,43 +180,47 @@ class Program
             {
                 var outputBuilder = new StringBuilder();
                 var errorBuilder = new StringBuilder();
-                
-                process.OutputDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)) {
+
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
                         outputBuilder.AppendLine(e.Data);
-                        LogMessage($"Sortie: {e.Data}");
+                        LogMessage($"Output: {e.Data}", false, "both");
                     }
                 };
-                
-                process.ErrorDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)) {
+
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
                         errorBuilder.AppendLine(e.Data);
-                        LogMessage($"Erreur: {e.Data}", true);
+                        LogMessage($"Error: {e.Data}", true, "both");
                     }
                 };
 
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
-                
+
                 bool success = process.WaitForExit(10000);
                 string output = outputBuilder.ToString();
                 string error = errorBuilder.ToString();
-                
+
                 if (!success || process.ExitCode != 0)
                 {
-                    LogMessage($"Error unmounting the file. Exit code: {process.ExitCode}", true);
-                    if (!string.IsNullOrEmpty(output)) LogMessage($"Sortie complète: {output}", true);
-                    if (!string.IsNullOrEmpty(error)) LogMessage($"Erreur complète: {error}", true);
+                    LogMessage($"Error unmounting the image file. Exit code: {process.ExitCode}", true, "both");
+                    if (!string.IsNullOrEmpty(output)) LogMessage($"Output data: {output}", true, "both");
+                    if (!string.IsNullOrEmpty(error)) LogMessage($"Error data: {error}", true, "both");
                     return false;
                 }
-                
+
                 return true;
             }
         }
         catch (Exception ex)
         {
-            LogMessage($"Error unmounting ImgDrive: {ex.Message}", true);
+            LogMessage($"Error unmounting ImgDrive: {ex.Message}", true, "both");
             return false;
         }
     }
@@ -312,18 +272,15 @@ class Program
                 {
                     if (key != null)
                     {
-                        string installPath = key.GetValue("InstallLocation") as string;
+                        string installPath = key.GetValue("InstallLocation") as string ?? string.Empty;
                         if (!string.IsNullOrEmpty(installPath))
                         {
-                            foreach (var exe in _ImgDriveExecutables)
+                            string fullPath = Path.Combine(installPath, _ImgDriveExecutables);
+                            if (File.Exists(fullPath))
                             {
-                                string fullPath = Path.Combine(installPath, exe);
-                                if (File.Exists(fullPath))
-                                {
-                                    _ImgDrivePath = fullPath;
-                                    LogMessage($"ImgDrive found: {_ImgDrivePath}");
-                                    return true;
-                                }
+                                _ImgDrivePath = fullPath;
+                                LogMessage($"ImgDrive found: {_ImgDrivePath}", false, "both");
+                                return true;
                             }
                         }
                     }
@@ -343,15 +300,12 @@ class Program
             {
                 if (Directory.Exists(path))
                 {
-                    foreach (var exe in _ImgDriveExecutables)
+                    string fullPath = Path.Combine(path, _ImgDriveExecutables);
+                    if (File.Exists(fullPath))
                     {
-                        string fullPath = Path.Combine(path, exe);
-                        if (File.Exists(fullPath))
-                        {
-                            _ImgDrivePath = fullPath;
-                            LogMessage($"ImgDrive found in Program Files: {_ImgDrivePath}");
-                            return true;
-                        }
+                        _ImgDrivePath = fullPath;
+                        LogMessage($"ImgDrive found in Program Files: {_ImgDrivePath}", false, "both");
+                        return true;
                     }
                 }
             }
@@ -362,25 +316,22 @@ class Program
             {
                 if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
                 {
-                    foreach (var exe in _ImgDriveExecutables)
+                    string fullPath = Path.Combine(path, _ImgDriveExecutables);
+                    if (File.Exists(fullPath))
                     {
-                        string fullPath = Path.Combine(path, exe);
-                        if (File.Exists(fullPath))
-                        {
-                            _ImgDrivePath = fullPath;
-                            LogMessage($"ImgDrive found in the PATH: {_ImgDrivePath}");
-                            return true;
-                        }
+                        _ImgDrivePath = fullPath;
+                        LogMessage($"ImgDrive found in the PATH: {_ImgDrivePath}", false, "both");
+                        return true;
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            LogMessage($"Error detecting ImgDrive: {ex.Message}", true);
+            LogMessage($"Error detecting ImgDrive: {ex.Message}", true, "both");
         }
 
-        LogMessage("ImgDrive not found on the system", true);
+        LogMessage("ImgDrive not found on the system", true, "both");
         return false;
     }
 
@@ -389,13 +340,13 @@ class Program
     {
         try
         {
-            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath);
+            string ImgDriveDir = Path.GetDirectoryName(_ImgDrivePath) ?? string.Empty;
 
             // Check if imgdrive.exe exists
             string ImgDriveExePath = Path.Combine(ImgDriveDir, "imgdrive.exe");
             if (!File.Exists(ImgDriveExePath))
             {
-                LogMessage("Executable not found in the ImgDrive folder.", true);
+                LogMessage("Executable not found in the ImgDrive folder.", true, "both");
                 return false;
             }
 
@@ -411,136 +362,62 @@ class Program
                 WorkingDirectory = ImgDriveDir
             };
 
-            LogMessage($"Execution of: {Path.GetFileName(ImgDriveExePath)} {startInfo.Arguments}");
+            LogMessage($"Execution of: {Path.GetFileName(ImgDriveExePath)} {startInfo.Arguments}", false, "both");
 
             using (var process = new Process { StartInfo = startInfo })
             {
                 // Read the output asynchronously to avoid deadlocks
                 var outputBuilder = new StringBuilder();
                 var errorBuilder = new StringBuilder();
-                
-                process.OutputDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)) {
+
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
                         outputBuilder.AppendLine(e.Data);
-                        LogMessage($"Sortie: {e.Data}");
+                        LogMessage($"Sortie: {e.Data}", false, "both");
                     }
                 };
-                
-                process.ErrorDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)) {
+
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
                         errorBuilder.AppendLine(e.Data);
-                        LogMessage($"Erreur: {e.Data}", true);
+                        LogMessage($"Erreur: {e.Data}", true, "both");
                     }
                 };
 
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
-                
+
                 bool success = process.WaitForExit(30000); // Wait a maximum of 30 seconds
 
                 if (!success)
                 {
-                    LogMessage("The assembly process took too long.", true);
+                    LogMessage("The assembly process took too long.", true, "both");
                     return false;
                 }
-                
+
                 string output = outputBuilder.ToString();
                 string error = errorBuilder.ToString();
-                
+
                 if (process.ExitCode != 0)
                 {
-                    LogMessage($"Error during mounting with ImgDrive. Exit code: {process.ExitCode}", true);
-                    if (!string.IsNullOrEmpty(output)) LogMessage($"Sortie complète: {output}", true);
-                    if (!string.IsNullOrEmpty(error)) LogMessage($"Erreur complète: {error}", true);
+                    LogMessage($"Error during mounting with ImgDrive. Exit code: {process.ExitCode}", true, "both");
+                    if (!string.IsNullOrEmpty(output)) LogMessage($"Sortie complète: {output}", true, "both");
+                    if (!string.IsNullOrEmpty(error)) LogMessage($"Erreur complète: {error}", true, "both");
                     return false;
                 }
-                
-                LogMessage("Image successfully mounted via ImgDrive");
+
+                LogMessage("Image successfully mounted via ImgDrive", false, "both");
                 return true;
             }
         }
         catch (Exception ex)
         {
-            LogMessage($"Error during mounting with ImgDrive: {ex.Message}", true);
-            return false;
-        }
-    }
-
-    // Mount an ISO image using PowerShell
-    private static bool MountIso(string isoPath)
-    {
-        try
-        {
-            // Check if file exists
-            if (!File.Exists(isoPath))
-            {
-                LogMessage($"ISO file does not exist: {isoPath}", true);
-                return false;
-            }
-
-            // Check if image is already mounted
-            if (IsImageMounted(isoPath))
-            {
-                LogMessage("Image is already mounted");
-                return true;
-            }
-
-            // Prepare PowerShell command
-            string psCommand = $"$null = Mount-DiskImage -ImagePath '{isoPath.Replace("'", "''")}' -PassThru -ErrorAction Stop";
-            
-            LogMessage($"Starting mount process...");
-            
-            var stopwatch = Stopwatch.StartNew();
-            
-            using (var process = new Process())
-            {
-                process.StartInfo = new ProcessStartInfo
-                {
-                    FileName = "powershell.exe",
-                    Arguments = $"-ExecutionPolicy Bypass -NoProfile -NonInteractive -Command \"& {{ {psCommand} }}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                process.Start();
-                
-                // Wait a bit to allow mounting to start
-                if (!process.WaitForExit(5000)) // 5 seconds maximum
-                {
-                    LogMessage("Mounting is taking longer than expected");
-                }
-                
-                process.WaitForExit();
-                stopwatch.Stop();
-                
-                LogMessage($"Mounting time: {stopwatch.ElapsedMilliseconds}ms");
-
-                if (process.ExitCode != 0)
-                {
-                    LogMessage($"Mounting failed with exit code: {process.ExitCode}", true);
-                    return false;
-                }
-
-                // Verify the mount was successful
-                int retries = 10; // Number of verification attempts
-                while (retries-- > 0)
-                {
-                    if (IsImageMounted(isoPath))
-                    {
-                        LogMessage("Image mounted successfully");
-                        return true;
-                    }
-                    Thread.Sleep(100); // Wait 100ms between checks
-                }
-
-                LogMessage("Mounting seems successful but not yet visible", true);
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogMessage($"Error mounting ISO: {ex.Message}", true);
+            LogMessage($"Error during mounting with ImgDrive: {ex.Message}", true, "both");
             return false;
         }
     }
@@ -552,7 +429,7 @@ class Program
         {
             // Create log file or overwrite if it exists
             File.WriteAllText(LogFilePath, "", Encoding.UTF8);
-            LogMessage("Application starting");
+            LogMessage("Application starting", false, "both");
         }
         catch (Exception ex)
         {
@@ -564,12 +441,12 @@ class Program
     static int Main(string[] args)
     {
         InitializeLog();
-        
+
         // Arguments validation
         if (args.Length == 0)
         {
-            string errorMessage = "No arguments provided. Usage: Mount: IsoMounter.exe \"path/to/rom\" or Unmount: IsoMounter.exe --unmount";
-            LogMessage($"{errorMessage}", true);
+            string errorMessage = "No arguments provided. Usage: Mount: IsoMounter.exe \"path/to/rom\" | Unmount: IsoMounter.exe --unmount";
+            LogMessage($"{errorMessage}", true, "file");
             Console.WriteLine($"Error: {errorMessage}");
             Console.WriteLine("Usage:");
             Console.WriteLine("  Mount: IsoMounter.exe \"path/to/rom\"");
@@ -585,7 +462,7 @@ class Program
 
         // Default to non-interactive mode for RetroBat usage
         bool interactive = args.Any(a => a == "--interactive");
-        
+
         // Filter arguments to keep only the game path and relevant options
         string[] filteredArgs = args.Where(a => a != "--interactive").ToArray();
 
@@ -593,27 +470,27 @@ class Program
         {
             // Rebuild the full path correctly handling quotes
             string fullPath = string.Join(" ", filteredArgs);
-            LogMessage($"Raw arguments value: {fullPath}");
-            
+            LogMessage($"Raw arguments value: {fullPath}", false, "both");
+
             // First argument is the full path to the game, potentially with spaces
             string romPath = fullPath.Trim();
-            
+
             // Clean path from quotes if present
             romPath = romPath.Trim('"');
-            LogMessage($"Cleaned ROM path: {romPath}");
-            
+            LogMessage($"Cleaned ROM path: {romPath}", false, "both");
+
             // Extract game name from full path
-            
+
             // Extract game name (last path segment without extension)
             string gameName = Path.GetFileName(romPath);
-            LogMessage($"Extracted filename: {gameName}");
-            
+            LogMessage($"Extracted filename: {gameName}", false, "both");
+
             // If path contains 'roms' (case insensitive), take the following segment
             int romsIndex = romPath.IndexOf("roms", StringComparison.OrdinalIgnoreCase);
             if (romsIndex >= 0)
             {
                 string afterRoms = romPath.Substring(romsIndex + 4); // +4 for "roms" length
-                LogMessage($"Path after 'roms': {afterRoms}");
+                LogMessage($"Path after 'roms': {afterRoms}", false, "both");
 
                 // Clean and divide the path
                 var pathParts = afterRoms.Trim('\\', '/', ' ').Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
@@ -636,34 +513,35 @@ class Program
 
                     // Remove the extension if present
                     gameName = Path.GetFileNameWithoutExtension(gameName);
-                    LogMessage($"Extracted game name: {gameName}");
+                    LogMessage($"Extracted game name: {gameName}", false, "both");
                 }
             }
 
-            LogMessage($"Searching image for game: {gameName}");
-            Console.WriteLine($"Searching image for game: {gameName}");
+            LogMessage($"Searching image for game: {gameName}", false, "both");
 
             // Folder containing the ISO images (same folder as the executable)
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
             string isoFolder = Path.Combine(appPath, "iso");
-            LogMessage($"Images folder: {isoFolder}");
+            string romFolder = Path.GetDirectoryName(romPath) + "\\" + Path.GetFileNameWithoutExtension(romPath);
+            //LogMessage($"Rom directory: {romDirectory}");
+            //LogMessage($"Images folder: {isoFolder}");
 
             // Create directory if it doesn't exist
             if (!Directory.Exists(isoFolder))
             {
                 try
                 {
-                    LogMessage("Creating ISO folder as it doesn't exist");
+                    LogMessage("Creating ISO folder as it doesn't exist", false, "both");
                     Directory.CreateDirectory(isoFolder);
-                    string message = $"The folder {isoFolder} has been created. Please place your disk images there.";
-                    LogMessage(message);
+                    string message = $"The folder {isoFolder} has been created. Please place your disc images there.";
+                    LogMessage(message, false, "both");
                     Console.WriteLine(message);
                     return 1;
                 }
                 catch (Exception ex)
                 {
                     string errorMsg = $"Unable to create the folder {isoFolder}: {ex.Message}";
-                    LogMessage(errorMsg, true);
+                    LogMessage(errorMsg, true, "both");
                     Console.WriteLine(errorMsg);
                     return 1;
                 }
@@ -673,21 +551,21 @@ class Program
             bool canUseImgDrive = IsImgDriveInstalled();
 
             // Define the supported formats based on the availability of ImgDrive
-            var supportedFormats = canUseImgDrive 
+            var supportedFormats = canUseImgDrive
                 ? _supportedImageFormats  // All formats if ImgDrive is installed
                 : new[] { ".iso" };      // Only ISO if ImgDrive is not installed
 
             if (!canUseImgDrive)
             {
-                LogMessage("ImgDrive is not installed. Only the ISO format is supported.", true);
+                LogMessage("ImgDrive is not installed.", true, "both");
             }
             else
             {
-                LogMessage("ImgDrive is installed. All image formats are supported.");
+                LogMessage("ImgDrive is installed.", false, "both");
             }
 
             // Search for image file matching the game name
-            var searchPatterns = supportedFormats.SelectMany(f => new[] 
+            var searchPatterns = supportedFormats.SelectMany(f => new[]
                 {
                     $"CD{f}",
                     $"{gameName}{f}",
@@ -709,21 +587,34 @@ class Program
                     .Select(p => p.Replace(".cue", ".bin")));
             }
 
-            string[] matchingFiles = searchPatterns
+            string[] matchingFiles1 = searchPatterns
                 .SelectMany(pattern => Directory.GetFiles(isoFolder, pattern, SearchOption.TopDirectoryOnly))
                 .ToArray();
 
-            if (matchingFiles.Length == 0)
+            string[] matchingFiles2 = searchPatterns
+                .SelectMany(pattern => Directory.GetFiles(romFolder, pattern, SearchOption.TopDirectoryOnly))
+                .ToArray();
+
+            string imagePath = string.Empty;
+
+            // Check the \iso and game folder for the image file
+            if (matchingFiles1.Length > 0)
             {
-                string errorMsg = $"No image found for game: {gameName}";
-                LogMessage(errorMsg, true);
-                Console.WriteLine(errorMsg);
+                LogMessage("Image found in \\iso folder", false, "both");
+                imagePath = matchingFiles1[0];
+            }
+            else if (matchingFiles2.Length > 0)
+            {
+                LogMessage("Image found in game folder", false, "both");
+                imagePath = matchingFiles2[0];
+            }
+            else
+            {
+                LogMessage("Image not found", true, "both");
                 return 1;
             }
 
-            string imagePath = matchingFiles[0];
-            LogMessage($"Image found: {imagePath}");
-            Console.WriteLine($"Image found: {imagePath}");
+            LogMessage($"Image found: {imagePath}", false, "both");
 
             // Try to mount the image
             try
@@ -740,81 +631,68 @@ class Program
                         string cuePath = Path.ChangeExtension(imagePath, ".cue");
                         if (File.Exists(cuePath))
                         {
-                            LogMessage($".cue file found, use it: {cuePath}");
+                            LogMessage($".cue file found, use it: {cuePath}", false, "both");
                             imagePath = cuePath;
                         }
                     }
-                    
-                    LogMessage($"Attempting to mount with ImgDrive: {imagePath}");
+
+                    LogMessage($"Attempting to mount with ImgDrive: {imagePath}", false, "both");
                     mountSuccess = MountWithImgDrive(imagePath);
-                }
-                // Alternatively, use native Windows mounting only for ISOs.
-                else if (extension == ".iso")
-                {
-                    LogMessage($"Attempting native Windows mounting: {imagePath}");
-                    mountSuccess = MountIso(imagePath);
-                }
-                else
-                {
-                    string errorMsg = "Image format not supported without ImgDrive.";
-                    LogMessage(errorMsg, true);
-                    Console.WriteLine(errorMsg);
-                    return 1;
                 }
 
                 if (mountSuccess)
                 {
-                        // Save the mounted image path.
-                        try
-                        {
-                            SaveMountedImage(imagePath);
-                            LogMessage("Mount information saved");
-                        }
-                        catch (Exception ex)
-                        {
-                            string errorMsg = $"Error saving mount state: {ex.Message}";
-                            LogMessage(errorMsg, true);
-                            Console.WriteLine(errorMsg);
-                        }
-                        
-                        // In non-interactive mode (default), exit immediately.
-                        LogMessage("Non-interactive mode, exiting immediately");
-                        
-                        // Interactive mode only if explicitly requested.
-                        if (interactive && Environment.UserInteractive)
-                        {
-                            LogMessage("Interactive mode detected, waiting for key press...");
-                            Console.WriteLine("Press any key to unmount and exit...");
-                            Console.ReadKey();
-                            return UnmountImage();
-                        }
-                        
-                        return 0; // Success
-                }
-                    else
+                    // Save the mounted image path.
+                    try
                     {
-                        string errorMsg = "Failed to mount image";
-                        LogMessage(errorMsg, true);
-                        Console.WriteLine(errorMsg);
-                        return 1;
+                        SaveMountedImage(imagePath);
+                        LogMessage("Mount information saved", false, "both");
                     }
+                    catch (Exception ex)
+                    {
+                        string errorMsg = $"Error saving mount state: {ex.Message}";
+                        LogMessage(errorMsg, true, "both");
+                        Console.WriteLine(errorMsg);
+                    }
+
+                    // In non-interactive mode (default), exit immediately.
+                    LogMessage("Non-interactive mode, exiting immediately", false, "both");
+
+                    // Interactive mode only if explicitly requested.
+                    if (interactive && Environment.UserInteractive)
+                    {
+                        LogMessage("Interactive mode detected, waiting for key press...", false, "both");
+                        Console.WriteLine("Press any key to unmount and exit...");
+                        Console.ReadKey();
+                        return UnmountImage();
+                    }
+
+                    return 0; // Success
                 }
-                catch (Exception ex)
+                else
                 {
-                    string errorMsg = $"Error mounting image: {ex.Message}";
-                    LogMessage(errorMsg, true);
+                    string errorMsg = "Failed to mount image";
+                    LogMessage(errorMsg, true, "both");
                     Console.WriteLine(errorMsg);
                     return 1;
                 }
             }
             catch (Exception ex)
             {
-                string errorMsg = $"Unexpected error: {ex.Message}";
-                LogMessage(errorMsg, true);
+                string errorMsg = $"Error mounting image: {ex.Message}";
+                LogMessage(errorMsg, true, "both");
                 Console.WriteLine(errorMsg);
                 return 1;
             }
-            
-            return 0; // End of program
+        }
+        catch (Exception ex)
+        {
+            string errorMsg = $"Unexpected error: {ex.Message}";
+            LogMessage(errorMsg, true, "both");
+            Console.WriteLine(errorMsg);
+            return 1;
+        }
+
+        //return 0; // End of program
     }
 }

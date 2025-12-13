@@ -6,8 +6,8 @@ for %%i in ("%cd%\..\..\..\..\plugins\IsoMounter\IsoMounter.exe") do set "IsoMou
 
 :: Check if the file exists
 if not exist "%IsoMounter_path%" (
-    echo Erreur: Impossible de trouver IsoMounter.exe
-    echo Path essaye: %IsoMounter_path%
+    echo Error: IsoMounter.exe not found
+    echo Path should be: %IsoMounter_path%
     pause
     exit /b 1
 )
